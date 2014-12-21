@@ -1,0 +1,5 @@
+graph a { 
+      A -- B -- C;
+      C -- A [ dir = forward ];
+      B [ color = blue ]
+}

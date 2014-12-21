@@ -1,0 +1,17 @@
+#c0
+ligne
+//c
+(**)
+ligne2 //c1
+ligne3
+(* c2 *)
+ligne4
+(*
+	c3
+	c3
+	c3
+	c3
+*)
+ligne5
+#c4
+ligne6
