@@ -33,6 +33,7 @@ stmt_list:
 		{[]} 
 	|	stmt { [$1] }
 	| stmt SEMICOLON stmt_list { $1 :: $3 }
+	| stmt stmt_list { $1 :: $2 }
 ;	
 
 node_id: 

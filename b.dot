@@ -1,3 +1,3 @@
 graph b { 
-      { A B } -- subgraph { C D }
+      { A; B } -- subgraph { C; D }
 }
