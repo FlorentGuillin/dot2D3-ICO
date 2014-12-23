@@ -2,7 +2,6 @@
 open Syntax;;
 %}
 
-%token <string> ID
 %token GRAPH ID
 %token STRICT
 %token LB
@@ -18,6 +17,7 @@ open Syntax;;
 %token COMMA
 %token EQUAL
 %token EOF
+%token <string> ID
 %start graph
 %type <Syntax.graph> graph
 %%
@@ -85,6 +85,7 @@ edge_stmt:
 stmt:
 		node_stmt { $1 }
 	| edge_stmt { $1 }
+	| ID EQUAL ID { ID_ID(ID($1), ID($3)) }
 	| attr_stmt { $1 }
 	| subgraph { $1 }
 ;

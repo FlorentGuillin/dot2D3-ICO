@@ -25,7 +25,7 @@ rule token = parse
 	| ',' { COMMA }
 	| '{' { LCB }
 	| '}' { RCB }
-	| [ 'a'-'z' 'A'-'Z' ](['a'-'z' 'A'-'Z' '0'-'9' '_' '-']*) | ['0'-'9']+  as value { ID value }
+	| [^'0'-'9' '\n' '\t' ' ' '[' ']' ';' ':' '=' ',' '{' '}' '#' '"'][^'\n' '\t' ' ' '[' ']' ';' ':' '=' ',' '{' '}' '#' '"']* | ['0'-'9']+ | ['"'][^ '"']*['"']  as value { ID value }
 	| eof { raise End_of_file } 
 
 and comment = parse
