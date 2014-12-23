@@ -3,7 +3,7 @@ ligne
 //c
 (**)
 ligne2 //c1
-ligne3
+ligne3 #blabla
 (* c2 *)
 ligne4
 (*

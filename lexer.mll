@@ -6,11 +6,26 @@ exception Eof
 
 rule token = parse
 	| [' ' '\t' '\n'] { token lexbuf }
-	| "(*" { big_comment lexbuf } (* Gestion des commentaires sur plusieurs lignes *)
-	| '\n'?'#' { comment lexbuf }  (* Gestion des commentaires en début de ligne -> # *)
-	| "//" { comment lexbuf } (* Gestion des commentaires en fin de ligne -> // *)
-	| '<' | '>' { token lexbuf }  (* Banalisation des balises HTML *)
-	| [ 'a'-'z' 'A'-'Z' ](['a'-'z' 'A'-'Z' '0'-'9' '_' '-']*) | ['0'-'9']+  as value { ID value } (* Récupération des identifiants -> ID *)
+	| "(*" { big_comment lexbuf } (* Deleting multi-lines comments *)
+	| "\n#" { comment lexbuf }  (* Deleting # comments -anywhere in the document except beginning -> # *)
+	| ("")+'#' { comment lexbuf }  (* Deleting # comments -beginning of file-  *)
+	| "//" { comment lexbuf } (* Deleting end line comments -> // *)
+	| '<' | '>' { token lexbuf }  (* Deleting HTML brackets *)
+	| ['g' 'G']['r' 'R']['a' 'A']['p' 'P']['h' 'H'] { GRAPH } (* graph, strict and subgraph are case-independent *)
+	| ['s' 'S']['u' 'U']['b' 'B']['g' 'G']['r' 'R']['a' 'A']['p' 'P']['h' 'H'] { SUBGRAPH }
+	| ['s' 'S']['t' 'T']['r' 'R']['i' 'I']['c' 'C']['t' 'T'] { STRICT }
+	| ['n' 'N']['o' 'O']['d' 'D']['e' 'E'] { NODE }
+	| ['e' 'E']['d' 'D']['g' 'G']['e' 'E'] { EDGE }
+	| "--" { EDGEOP }
+	| '[' { LB }
+	| ']' { RB }
+	| ';' { SEMICOLON }
+	| ':' { COLON }
+	| '=' { EQUAL }
+	| ',' { COMMA }
+	| '{' { LCB }
+	| '}' { RCB }
+	| [ 'a'-'z' 'A'-'Z' ](['a'-'z' 'A'-'Z' '0'-'9' '_' '-']*) | ['0'-'9']+  as value { ID value }
 	| eof { raise End_of_file } 
 
 and comment = parse

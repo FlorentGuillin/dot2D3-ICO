@@ -8,16 +8,16 @@ let _ =
 			try
 				let lexbuf = Lexing.from_channel file in
 				while true do
-					let result = Parser.main Lexer.token lexbuf in
-						print_endline result;flush stdout
+					let result = Parser.graph Lexer.token lexbuf in
+						flush stdout
 				done
 			with Lexer.Eof ->
 				close_in file;
 				exit 0
 		end
 		else begin
-			print_endline "Mauvaise extension de fichier: .dot attendu";exit 0
+			print_endline "Bad file extension: .dot expected";exit 0
 		end
 	end else begin 
-		print_endline "Commande attendue: ./dot2D3 fichier.dot"; exit 0 
+		print_endline "Expected command: ./dot2D3 file.dot"; exit 0 
 	end
