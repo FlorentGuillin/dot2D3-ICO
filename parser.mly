@@ -23,10 +23,10 @@ open Syntax;;
 %%
 
 graph:
-		STRICT GRAPH ID LCB stmt_list RCB { GRAPH(ID($3), $5) }
-	| STRICT GRAPH LCB stmt_list RCB { GRAPH(ID(""), $4) } 
-	| GRAPH ID LCB stmt_list RCB { GRAPH(ID($2), $4) }
-	| GRAPH LCB stmt_list RCB { GRAPH(ID(""), $3) }
+		STRICT GRAPH ID LCB stmt_list RCB EOF { GRAPH(ID($3), $5) }
+	| STRICT GRAPH LCB stmt_list RCB EOF { GRAPH(ID(""), $4) } 
+	| GRAPH ID LCB stmt_list RCB EOF { GRAPH(ID($2), $4) }
+	| GRAPH LCB stmt_list RCB EOF { GRAPH(ID(""), $3) }
 ;
 
 stmt_list:

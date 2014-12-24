@@ -11,3 +11,7 @@ and stmt = NODE_STMT of (id * id) * ((id * id) list) list
 	| SUBGRAPH of id * stmt list
 
 and graph = GRAPH of id * stmt list;;
+
+type params = PARAMS of (string * string) list;;
+type node = NODE of string * (string * string) list;;
+type edge = EDGE of string * string * (string * string) list;;

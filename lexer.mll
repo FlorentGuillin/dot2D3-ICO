@@ -26,7 +26,7 @@ rule token = parse
 	| '{' { LCB }
 	| '}' { RCB }
 	| [^'0'-'9' '\n' '\t' ' ' '[' ']' ';' ':' '=' ',' '{' '}' '#' '"'][^'\n' '\t' ' ' '[' ']' ';' ':' '=' ',' '{' '}' '#' '"']* | ['0'-'9']+ | ['"'][^ '"']*['"']  as value { ID value }
-	| eof { raise End_of_file } 
+	| eof { EOF } 
 
 and comment = parse
 	| '\n' { token lexbuf }
