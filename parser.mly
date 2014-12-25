@@ -2,29 +2,26 @@
 open Syntax;;
 %}
 
-%token GRAPH ID
-%token STRICT
-%token LB
-%token LCB
-%token RB
-%token RCB
+%token <string> ID
+%token STRICT GRAPH EOF
+%token SEMICOLON
+%token LB LCB RB RCB
 %token SUBGRAPH
 %token EDGEOP
-%token SEMICOLON
 %token COLON
 %token EDGE
 %token NODE
 %token COMMA
 %token EQUAL
-%token EOF
-%token <string> ID
+
 %start graph
 %type <Syntax.graph> graph
 %%
 
 graph:
-		STRICT GRAPH ID LCB stmt_list RCB EOF { GRAPH(ID($3), $5) }
-	| STRICT GRAPH LCB stmt_list RCB EOF { GRAPH(ID(""), $4) } 
+		EOF { GRAPH(ID(""), []) }
+	|	STRICT GRAPH ID LCB stmt_list RCB EOF{ GRAPH(ID($3), $5) }
+	| STRICT GRAPH LCB stmt_list RCB EOF{ GRAPH(ID(""), $4) } 
 	| GRAPH ID LCB stmt_list RCB EOF { GRAPH(ID($2), $4) }
 	| GRAPH LCB stmt_list RCB EOF { GRAPH(ID(""), $3) }
 ;
@@ -63,14 +60,14 @@ attr_stmt:
 attr_list: 
 		{[]}
 	|	LB a_list RB { [$2] }
-	|	LB a_list RB a_list { $2 :: [$4] }
+	|	LB a_list RB attr_list { [$2] @ $4 }
 ;
 
 a_list:
 		{[]} 
 	|	ID EQUAL ID { [(ID($1),ID($3))] }
-	|	ID EQUAL ID SEMICOLON a_list { (ID($1),ID($3)) :: $5}
-	|	ID EQUAL ID COMMA a_list { (ID($1),ID($3)) :: $5}
+	|	ID EQUAL ID SEMICOLON a_list { [(ID($1),ID($3))] @ $5}
+	|	ID EQUAL ID COMMA a_list { [(ID($1),ID($3))] @ $5}
 ;
 
 node_stmt: 
@@ -89,3 +86,4 @@ stmt:
 	| attr_stmt { $1 }
 	| subgraph { $1 }
 ;
+%%
