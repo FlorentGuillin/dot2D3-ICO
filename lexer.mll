@@ -1,5 +1,6 @@
 {
 open Parser
+open String
 exception Eof
 }
 
@@ -25,7 +26,8 @@ rule token = parse
 	| ',' { COMMA }
 	| '{' { LCB }
 	| '}' { RCB }
-	| [^'0'-'9' '\n' '\t' ' ' '[' ']' ';' ':' '=' ',' '{' '}' '#' '"'][^'\n' '\t' ' ' '[' ']' ';' ':' '=' ',' '{' '}' '#' '"']* | ['0'-'9']+ | ['"'][^ '"']*['"']  as value { ID value }
+	| [^'0'-'9' '\n' '\t' ' ' '[' ']' ';' ':' '=' ',' '{' '}' '#' '"'][^'\n' '\t' ' ' '[' ']' ';' ':' '=' ',' '{' '}' '#' '"']* | ['0'-'9']+ as value { ID value }
+	| ['"'][^ '"']*['"']  as value { ID (sub value 1 ((length value)-2)) }
 	| eof | _ { EOF }
 	
 and comment = parse

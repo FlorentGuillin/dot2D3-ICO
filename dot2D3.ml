@@ -1,6 +1,7 @@
 (* dot2D3.ml *)
 open Filename
 open Syntax
+open Printf
 
 (* Affiche le contenu d'un stmt sous forme de string *)
 
@@ -26,7 +27,7 @@ let graph_to_string graph = match graph with
 
 (* Affiche le contenu d'un paramêtre sous forme de string *)
 let param_to_string param = match param with
-	| (a, b) -> a ^ "=" ^ b
+	| (a, b) -> a ^ "=" ^ b ^ "a"
 ;;
 
 (* Affiche le contenu d'une liste de paramètres sous forme de  string *)
@@ -250,7 +251,7 @@ let rec call_create_nodes_edges graph =
 		| NODE_STMT(id, params) -> sweep_node_list couple (id_id_to_string id) (attr_list_to_string_string_list params)
 		| ATTR_STMT (stmt_type, params) -> (add_params_from_attr_stmt stmt_type (attr_list_to_string_string_list params) couple)
 		| ID_ID param -> couple
-		| EDGE_STMT(stmt, edgeRHS, params) -> merge_couple couple (sweep_edge_stmt stmt edgeRHS ([], []) (attr_list_to_string_string_list params)) 
+		| EDGE_STMT(stmt, edgeRHS, params) -> merge_couple (sweep_edge_stmt stmt edgeRHS ([], []) (attr_list_to_string_string_list params)) couple
 		| SUBGRAPH (id, stmt_list) -> merge_couple couple (call_create_nodes_edges (GRAPH(id, stmt_list))) (* Crée le sous-ensemble de sommets d'arêtes du subgraph et le fusionne avec celui du graph *) and
 			(* Crée les arêtes issus d'un edge_stmt, si un noeud composant l'arête n'existe pas, il est aussi ajouté *)
 			sweep_edge_stmt stmt edgeRHS couple params = match edgeRHS with
@@ -270,6 +271,76 @@ let rec call_create_nodes_edges graph =
 						| GRAPH (id, stmt_list) -> sweep_stmt_list stmt_list couple
 ;;
 
+(* Transforme une string en char list *)
+let explode s =
+  let rec expl i l =
+    if i < 0 then l else
+    expl (i - 1) (s.[i] :: l) in
+  expl (String.length s - 1) [];;
+
+(* Encode un caractère selon le sujet du projet *)
+let encode_char letter = 
+	let code = int_of_char letter in
+		if (code < 48 || code > 57 && code < 65 || code > 90 && code < 97 || code > 122) 
+			then "_" ^ (Printf.sprintf "%x" code) 
+			else String.make 1 letter 
+;;	
+
+let rec encode word = match word with
+	| [] -> "" 
+	| head :: tail -> (encode_char head)^(encode tail)
+;;
+
+let print_param param = match param with
+	| (attr, value) -> ", " ^ attr ^ " : \"" ^ value ^ "\""
+;;
+
+let rec print_params params = match params with
+	| [] -> ""
+	| head :: tail -> (print_param head) ^ (print_params tail)
+;;
+
+let print_node node = match node with 
+	| NODE(id, params) -> let encoded_id = (encode (explode id)) in "var " ^ encoded_id ^ " = { x : 20, y : 20 " ^ (print_params params) ^ "};\nnodes.push(" ^ encoded_id ^");\n"
+;;
+
+let rec print_nodes nodes = match nodes with
+	| [] -> ""
+	| head :: tail -> (print_node head) ^ (print_nodes tail)
+;;
+
+let print_edge edge count = match edge with
+	| EDGE(start_node, end_node, params) -> "var edge" ^ (string_of_int count) ^ " = { source : " ^ (encode (explode start_node)) ^ ", target : " ^ (encode (explode end_node)) ^ (print_params params) ^"};\nlinks.push(edge" ^ (string_of_int count) ^ ");\n" 
+
+let rec print_edges edges count = match edges with 
+	| [] -> ""
+	| head :: tail -> (print_edge head count) ^ (print_edges tail (count + 1))
+;;
+
+let print_graph couple = match couple with 
+	| (nodes, edges) -> (print_nodes nodes)^(print_edges edges 0)
+;;
+
+let save_graph_in_html couple filename =
+	let saved_graph = open_out ("./" ^ filename ^ ".html") in
+	let header = open_in "header.txt" in
+	let footer = open_in "footer.txt" in
+	try
+		while true; do
+			fprintf saved_graph "%s\n" (input_line header);
+		done;
+	with End_of_file ->
+		close_in header;
+		fprintf saved_graph "%s" (print_graph couple);
+		try
+			while true; do 
+				fprintf saved_graph "%s\n" (input_line footer);
+			done;
+		with End_of_file ->
+			close_out saved_graph;
+			close_in footer;
+;;
+
 (* Programme d'appel, lit le fichier .dot, le transforme en graph, l'analyse et retourne le fichier html *)
 let _ =
 	if (Array.length Sys.argv) == 2 then begin  
@@ -278,8 +349,10 @@ let _ =
 			try
 				let lexbuf = Lexing.from_channel file in
 					let graph = Parser.graph Lexer.token lexbuf in
-						print_endline ("Graph: OK" ^ "\nContenu du graphe: " ^ (graph_to_string graph)); let couple = call_create_nodes_edges graph in	
-							print_endline ("Nodes and edges: OK\n" ^ couple_to_string couple); flush stdout
+						print_endline ("Graph: OK" ^ "\nContenu du graphe: " ^ (graph_to_string graph) ^ "\n"); let couple = call_create_nodes_edges graph in	
+							print_endline ("Nodes and edges: OK\n" ^ (couple_to_string couple) ^ "\n"); save_graph_in_html couple (chop_extension (basename (Sys.argv.(1))));
+							print_endline ("HTML: OK\n" ^ (print_graph couple) ^ "\n");
+							flush stdout
 			with Lexer.Eof ->
 				close_in file;
 				exit 0
