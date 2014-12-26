@@ -205,7 +205,7 @@ let rec sweep_stmt_list stmt_list couple = match stmt_list with
 (* Point d'entrée du traitement du graph *)
 
 let call_create_nodes_edges graph =
-	let couple = ([NODE("", [])], [EDGE("", "", [])]) in  
+	let couple = ([], []) in  
 		match graph with
 		| GRAPH (id, stmt_list) -> sweep_stmt_list stmt_list couple
 
