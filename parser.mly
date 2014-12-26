@@ -65,7 +65,7 @@ attr_list:
 
 a_list:
 		{[]} 
-	|	ID EQUAL ID { [(ID($1),ID($3))] }
+	|	ID EQUAL ID  a_list { [(ID($1),ID($3))] @ $4}
 	|	ID EQUAL ID SEMICOLON a_list { [(ID($1),ID($3))] @ $5}
 	|	ID EQUAL ID COMMA a_list { [(ID($1),ID($3))] @ $5}
 ;
