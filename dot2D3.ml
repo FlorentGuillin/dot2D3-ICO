@@ -165,6 +165,22 @@ let rec sweep_node_list couple id params = match (get_node_list_from_couple coup
 		else ([head]@(get_node_list_from_couple(sweep_node_list (tail, (get_edge_list_from_couple couple)) id params)), (get_edge_list_from_couple couple)) 
 ;;
 
+(* Compare une arête avec deux strings *)
+let compare_edges edge start_node end_node = match edge with
+	| EDGE (sn, en, params) -> if (sn = start_node && en = end_node)
+		then true
+		else false
+;;
+
+(* La liste des arêtes est parcourue, si un nom n'est pas présent, on l'ajoute avec ses paramètres, 
+	sinon, on ne crée pas d'arête mais on parcourt les paramètres pour voir s'il y en a des nouveaux ou des modifiables *)
+let rec sweep_edge_list couple start_node end_node params = match (get_edge_list_from_couple couple) with
+	| [] -> ((get_node_list_from_couple couple), [EDGE(start_node, end_node, params)]) 
+	| head :: tail -> if (compare_edges head start_node end_node)
+		then ((get_node_list_from_couple couple), [(analyze_edge_param_list head params)]@tail)
+		else ((get_node_list_from_couple couple), [head]@(get_edge_list_from_couple(sweep_edge_list ((get_node_list_from_couple couple), tail) start_node end_node params)))
+;;
+
 (* Parcourt la liste d'arêtes pour ajouter ou modifier les paramètres de params *)
 let rec add_params_to_each_edge edges params = match edges with
 	| [] -> []
@@ -179,35 +195,80 @@ let rec add_params_to_each_node nodes params = match nodes with
 
 (* Analise un attr_stmt pour savoir s'il faut l'appliquer au graph, aux noeuds ou arêtes et agit en fonction *) 
 let add_params_from_attr_stmt stmt_type params couple = match stmt_type with
-	| "graph" -> ((add_params_to_each_node (get_node_list_from_couple couple) params), (add_params_to_each_edge (get_edge_list_from_couple couple) params))
+	| "graph" -> couple (* Les attributs de graph ne sont pas transmis à D3.js *)
 	| "node" -> ((add_params_to_each_node (get_node_list_from_couple couple) params), (get_edge_list_from_couple couple))
 	| "edge" -> ((get_node_list_from_couple couple), (add_params_to_each_edge (get_edge_list_from_couple couple) params)) 
 	| _ -> couple
 ;;
 
-(* Analyse le stmt courant parmi une liste pour savoir quoi faire (ajout de noeud, arête, modification ou ajout de paramètre *)
-let analyze_stmt stmt couple = match stmt with 
-	| NODE_STMT(id, params) -> sweep_node_list couple (id_id_to_string id) (attr_list_to_string_string_list params)
-	| ATTR_STMT (stmt_type, params) -> (add_params_from_attr_stmt stmt_type (attr_list_to_string_string_list params) couple)
-	| ID_ID param -> couple
-	| EDGE_STMT(stmt, edgeRHS, params) -> couple
-	| SUBGRAPH (id, stmt_list) -> couple
+(* Ajoute une arête à un ensemble d'arêtes existant *)
+let add_edge_to_edges edges edge = match edge with
+	| EDGE(start_node, end_node, params) -> get_edge_list_from_couple (sweep_edge_list ([], edges) start_node end_node params)
 ;;
 
+(* Parcout  l'ensemble des arêtes récentes pour les ajouter à l'ancien ou modifier celles de l'ancien s'il y en a des communes *)
+let rec merge_edges edges1 edges2 = match edges2 with
+	| [] -> edges1
+	| head :: tail -> merge_edges (add_edge_to_edges edges1 head) tail
+;;
 
-(* Parcourt tous les stmts d'un graphe, retourne l'ensemble des noeuds ou arêtes *)
+(* Ajoute un noeud à un ensemble de noeuds existant *)
+let add_node_to_nodes nodes node = match node with
+	| NODE (id, params) -> get_node_list_from_couple (sweep_node_list (nodes, []) id params)
+;;
 
-let rec sweep_stmt_list stmt_list couple = match stmt_list with
-	| [] -> couple
-	| head :: tail -> sweep_stmt_list tail (analyze_stmt head couple) 
-;;	
+(* Parcourt l'ensemble des noeuds récents pour les ajouter à l'ancien ou modifier ceux de l'ancien s'il y en a des communs *) 
+let rec merge_nodes nodes1 nodes2 = match nodes2 with
+	| [] -> nodes1
+	| head :: tail -> merge_nodes (add_node_to_nodes nodes1 head) tail
+;;
+
+(* Fusionne deux ensembles de noeuds et arêtes. Couple2 étant l'ensemble le plus récent, ses params identiques à ceux de couple1 modifier ceux du premier *)
+let merge_couple couple1 couple2 = match (couple1, couple2) with
+	| ((nodes1, edges1), (nodes2, edges2)) -> ((merge_nodes nodes1 nodes2), (merge_edges edges1 edges2))
+;;
+
+let create_edge node1 node2 params = match (node1, node2) with
+	|	(NODE(id1, params1), NODE(id2, params2)) -> EDGE(id1, id2, params)
+;;
+
+let rec create_multiple_edges nodes node params = match nodes with
+	| [] -> []
+	| head :: tail -> [create_edge node head params]@(create_multiple_edges tail node params)
+;;
+
+(* Crée une arête pour chaque noeud d'un premier ensemble avec chaque noeud du second *)
+let rec create_edges_between_nodes nodes1 nodes2 params = match nodes1 with
+	| [] -> []
+	| head :: tail -> (create_multiple_edges nodes2 head params)@(create_edges_between_nodes tail nodes2 params)
+;;
 
 (* Point d'entrée du traitement du graph *)
-
-let call_create_nodes_edges graph =
-	let couple = ([], []) in  
-		match graph with
-		| GRAPH (id, stmt_list) -> sweep_stmt_list stmt_list couple
+let rec call_create_nodes_edges graph =
+(* Analyse le stmt courant parmi une liste pour savoir quoi faire (ajout de noeud, arête, modification ou ajout de paramètre *)
+	let rec analyze_stmt stmt couple = match stmt with 
+		| NODE_STMT(id, params) -> sweep_node_list couple (id_id_to_string id) (attr_list_to_string_string_list params)
+		| ATTR_STMT (stmt_type, params) -> (add_params_from_attr_stmt stmt_type (attr_list_to_string_string_list params) couple)
+		| ID_ID param -> couple
+		| EDGE_STMT(stmt, edgeRHS, params) -> merge_couple couple (sweep_edge_stmt stmt edgeRHS ([], []) (attr_list_to_string_string_list params)) 
+		| SUBGRAPH (id, stmt_list) -> merge_couple couple (call_create_nodes_edges (GRAPH(id, stmt_list))) (* Crée le sous-ensemble de sommets d'arêtes du subgraph et le fusionne avec celui du graph *) and
+			(* Crée les arêtes issus d'un edge_stmt, si un noeud composant l'arête n'existe pas, il est aussi ajouté *)
+			sweep_edge_stmt stmt edgeRHS couple params = match edgeRHS with
+				| EDGERHS_EMPTY -> ([], [])
+				| EDGERHS (next_stmt, next_edgeRHS)-> let c1 = (analyze_stmt stmt ([], [])) in
+					let c2 = (analyze_stmt next_stmt ([], [])) in 
+					let c3 = merge_couple c1 c2 in 
+					let c4 = ((get_node_list_from_couple c3), (get_edge_list_from_couple c3)@(create_edges_between_nodes (get_node_list_from_couple c1) (get_node_list_from_couple c2) params)) in
+					let c5 = (merge_couple c4 (sweep_edge_stmt next_stmt next_edgeRHS couple params)) in
+					(merge_couple couple c5) in
+				(* Parcourt tous les stmts d'un graphe, retourne l'ensemble des noeuds ou arêtes *)
+				let rec sweep_stmt_list stmt_list couple = match stmt_list with
+				| [] -> couple
+				| head :: tail -> sweep_stmt_list tail (analyze_stmt head couple) in
+					let couple = ([], []) in  
+						match graph with
+						| GRAPH (id, stmt_list) -> sweep_stmt_list stmt_list couple
+;;
 
 (* Programme d'appel, lit le fichier .dot, le transforme en graph, l'analyse et retourne le fichier html *)
 let _ =

@@ -45,10 +45,10 @@ subgraph:
 ;
 
 edgeRHS: 
-		EDGEOP subgraph edgeRHS { EDGERHS_S($2, $3)}
-	|	EDGEOP subgraph { EDGERHS_S($2, EDGERHS_E) }
-	| EDGEOP node_id edgeRHS { EDGERHS_N($2, $3) }
-	| EDGEOP node_id { EDGERHS_N($2, EDGERHS_E) }
+		EDGEOP subgraph edgeRHS { EDGERHS($2, $3)}
+	|	EDGEOP subgraph { EDGERHS($2, EDGERHS_EMPTY) }
+	| EDGEOP node_id edgeRHS { EDGERHS(NODE_STMT($2, []), $3) }
+	| EDGEOP node_id { EDGERHS(NODE_STMT($2, []), EDGERHS_EMPTY) }
 ; 
 
 attr_stmt: 

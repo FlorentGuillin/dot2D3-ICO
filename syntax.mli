@@ -1,8 +1,7 @@
 type id = ID of string
 
-and edgeRHS = EDGERHS_E
-	|	EDGERHS_N of (id * id) * edgeRHS
-	| EDGERHS_S of stmt * edgeRHS
+and edgeRHS = EDGERHS_EMPTY
+	| EDGERHS of stmt * edgeRHS
 
 and stmt = NODE_STMT of (id * id) * ((id * id) list) list
 	| EDGE_STMT of stmt * edgeRHS * ((id * id) list) list
